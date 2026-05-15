@@ -7,10 +7,10 @@ from typing import Annotated, Any, ClassVar, Literal, Protocol, Union, get_args,
 class DataclassInstance(Protocol):
     __dataclass_fields__: ClassVar[dict[str, Field[Any]]]
 
-def camel_case_to_env(string: str) -> str:
+def _camel_case_to_env(string: str) -> str:
     return "".join(["_" + char if char.isupper() else char.upper() for char in string]).lstrip("_")
 
-def snake_case_to_env(string: str) -> str:
+def _snake_case_to_env(string: str) -> str:
     return string.upper()
 
 def parse[T: DataclassInstance](cls: type[T]) -> T:
@@ -59,6 +59,8 @@ def parse[T: DataclassInstance](cls: type[T]) -> T:
           с одним аргументом и одним выходным значением
           (field: Annotated[int, lambda x: x + 10]).
 
+        - Модификаторы не применяются к дефолтным значениям.
+
         - Модификаторы применяются после попытки привести строку-значение
           к типу и в том же порядке, в каком указаны внутри Annotated.
 
@@ -66,7 +68,7 @@ def parse[T: DataclassInstance](cls: type[T]) -> T:
 
     """
     # Префикс переменных для парсинга
-    prefix = camel_case_to_env(cls.__name__)
+    prefix = _camel_case_to_env(cls.__name__)
 
     # Словарь полей и их значений из окружения
     value_dict = dict()
@@ -74,7 +76,7 @@ def parse[T: DataclassInstance](cls: type[T]) -> T:
     # Проходимся по каждому полю датакласса
     for class_field in fields(cls):
         field_types = [class_field.type]
-        field_name = snake_case_to_env(class_field.name)
+        field_name = _snake_case_to_env(class_field.name)
         field_modificators = list()
 
         # Если тип - датакласс, то парсим его из окружения и вставляем в поле

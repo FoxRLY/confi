@@ -3,8 +3,7 @@ from dataclasses import dataclass, field
 from os import environ
 from typing import Annotated, Literal
 
-from confi.class_parser import parse
-
+from confi import parse
 
 environ["BRUH_KWUH_A"] = "10"
 environ["BRUH_KWUH_B"] = "2.32"

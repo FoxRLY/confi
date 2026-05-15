@@ -1,2 +1,5 @@
-def hello() -> str:
-    return "Hello from confi!"
+from confi.class_parser import parse
+
+__all__ = [
+    "parse"
+]
