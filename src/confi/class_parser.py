@@ -1,7 +1,7 @@
 from dataclasses import MISSING, Field, fields, is_dataclass
 from os import getenv
 from types import UnionType
-from typing import Annotated, Any, ClassVar, Literal, Protocol, Union, get_args, get_origin
+from typing import Annotated, Any, ClassVar, Type, TypeVar, Literal, Protocol, Union, get_args, get_origin
 
 
 class DataclassInstance(Protocol):
@@ -13,7 +13,9 @@ def _camel_case_to_env(string: str) -> str:
 def _snake_case_to_env(string: str) -> str:
     return string.upper()
 
-def parse[T: DataclassInstance](cls: type[T]) -> T:
+T = TypeVar("T", bound=DataclassInstance)
+
+def parse(cls: Type[T] ) -> T:
     """
     Спарсить переменные окружения с помощью указанного датакласса.
 
