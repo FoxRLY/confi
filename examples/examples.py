@@ -22,6 +22,7 @@ set_environment({
     "EXAMPLE_G": None,
     "EXAMPLE_H": None,
     "EXAMPLE_I": None,
+    "EXAMPLE_J": "true"
 })
 
 @dataclass
@@ -39,6 +40,7 @@ class Example:
     g: int = 10
     h: int | None = None
     i: Literal["read", "write"] = "write"
+    j: bool = False
 
 example = parse(Example)
 

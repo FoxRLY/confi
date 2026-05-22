@@ -16,6 +16,7 @@ def test_builtin_types():
         "TEST_CLASS_FIELD_A": "125",
         "TEST_CLASS_FIELD_B": "12.34",
         "TEST_CLASS_FIELD_C": "Hello",
+        "TEST_CLASS_FIELD_D": "true",
     })
 
     @dataclass
@@ -23,12 +24,14 @@ def test_builtin_types():
         field_a: int
         field_b: float
         field_c: str
+        field_d: bool
 
     parsed_value = parse(TestClass)
 
     assert parsed_value.field_a == 125
     assert parsed_value.field_b == 12.34
     assert parsed_value.field_c == "Hello"
+    assert parsed_value.field_d == True
 
 def test_builtin_type_failing():
     set_environment({

@@ -13,6 +13,14 @@ def _camel_case_to_env(string: str) -> str:
 def _snake_case_to_env(string: str) -> str:
     return string.upper()
 
+def _boolean(value: str) -> bool | str:
+    if value.lower() in ["true", "yes"]:
+        return True
+    elif value.lower() in ["false", "no"]:
+        return False
+    else:
+        return value
+
 T = TypeVar("T", bound=DataclassInstance)
 
 def parse(cls: Type[T] ) -> T:
@@ -115,13 +123,15 @@ def parse(cls: Type[T] ) -> T:
         if value is None:
             # И нет дефолтных значений для поля, то выдаем ошибку
             if class_field.default is MISSING and class_field.default_factory is MISSING:
-                raise ValueError(f"Ошибка: переменная {prefix}_{field_name} для поля {cls.__name__}.{class_field.name} не найдена и не имеет значения по умолчанию")
+                raise ValueError(f"Ошибка: переменная {prefix}_{field_name} не найдена и не имеет значения по умолчанию")
             # Иначе пропускаем поле, автоматом присваивая ему дефолтное значение
             continue
 
         # Попытка преобразовать поле в нужные типы
         for field_type in field_types:
             try:
+                if field_type is bool:
+                    field_type = _boolean
                 value = field_type(value) # type: ignore
                 break
             except:
@@ -136,7 +146,10 @@ def parse(cls: Type[T] ) -> T:
 
         # Применение модификаторов
         for modificator in field_modificators:
-            value = modificator(value)
+            try:
+                value = modificator(value)
+            except Exception as e:
+                raise ValueError(f"Ошибка: {cls.__name__}.{class_field.name} | {modificator.__name__}: {e}")
 
         # Сохранение значения поля
         value_dict[class_field.name] = value
