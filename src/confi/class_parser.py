@@ -59,7 +59,7 @@ def parse(cls: Type[T] ) -> T:
           (a: int = 10 или a: str = field(default_factory=lambda: "Привет")).
 
         - Дефолтные значения присваиваются только в том случае, если соответствующие
-          переменные окружения не имеют значения.
+          переменные окружения не имеют значения или имеют пустое значение.
 
         - Опциональные поля указываются через составной тип с None
           и присваивание дефолтным значением None (field: type | None = None).
@@ -120,7 +120,7 @@ def parse(cls: Type[T] ) -> T:
         value = initial_value
 
         # Если значения нет
-        if value is None:
+        if value is None or len(value.strip()) == 0:
             # И нет дефолтных значений для поля, то выдаем ошибку
             if class_field.default is MISSING and class_field.default_factory is MISSING:
                 raise ValueError(f"Ошибка: переменная {prefix}_{field_name} не найдена и не имеет значения по умолчанию")
