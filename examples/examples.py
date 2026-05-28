@@ -12,23 +12,28 @@ def set_environment(variables: dict[str, str | None]):
         else:
             environ[name] = value
 
-set_environment({
-    "EXAMPLE_A": "1",
-    "EXAMPLE_BETTER_A": "ONE",
-    "EXAMPLE_C": "1",
-    "EXAMPLE_D": "read",
-    "EXAMPLE_INNER_A": "1",
-    "EXAMPLE_F": "1",
-    "EXAMPLE_G": None,
-    "EXAMPLE_H": None,
-    "EXAMPLE_I": None,
-    "EXAMPLE_J": "true",
-    "EXAMPLE_K": ""
-})
+
+set_environment(
+    {
+        "EXAMPLE_A": "1",
+        "EXAMPLE_BETTER_A": "ONE",
+        "EXAMPLE_C": "1",
+        "EXAMPLE_D": "read",
+        "EXAMPLE_INNER_A": "1",
+        "EXAMPLE_F": "1",
+        "EXAMPLE_G": None,
+        "EXAMPLE_H": None,
+        "EXAMPLE_I": None,
+        "EXAMPLE_J": "true",
+        "EXAMPLE_K": "",
+    }
+)
+
 
 @dataclass
 class ExampleInner:
     a: int
+
 
 @dataclass
 class Example:
@@ -43,6 +48,7 @@ class Example:
     i: Literal["read", "write"] = "write"
     j: bool = False
     k: str | None = None
+
 
 example = parse(Example)
 

@@ -1,17 +1,43 @@
 from dataclasses import MISSING, Field, fields, is_dataclass
 from os import getenv
 from types import UnionType
-from typing import Annotated, Any, ClassVar, Type, TypeVar, Literal, Protocol, Union, get_args, get_origin
+from typing import (
+    Annotated,
+    Any,
+    ClassVar,
+    Type,
+    TypeVar,
+    Literal,
+    Protocol,
+    Union,
+    get_args,
+    get_origin,
+)
 
 
 class DataclassInstance(Protocol):
     __dataclass_fields__: ClassVar[dict[str, Field[Any]]]
 
+
+class AggregatedException(Exception):
+    def __init__(self, exceptions: list[Exception], message: str | None = None):
+        self.message = message or "Multiple exceptions caught:"
+        super().__init__(self.message)
+        self.exceptions = exceptions
+
+    def __str__(self) -> str:
+        return "\n".join([self.message] + [str(e) for e in self.exceptions])
+
+
 def _camel_case_to_env(string: str) -> str:
-    return "".join(["_" + char if char.isupper() else char.upper() for char in string]).lstrip("_")
+    return "".join(
+        ["_" + char if char.isupper() else char.upper() for char in string]
+    ).lstrip("_")
+
 
 def _snake_case_to_env(string: str) -> str:
     return string.upper()
+
 
 def _boolean(value: str) -> bool | str:
     if value.lower() in ["true", "yes"]:
@@ -21,9 +47,11 @@ def _boolean(value: str) -> bool | str:
     else:
         return value
 
+
 T = TypeVar("T", bound=DataclassInstance)
 
-def parse(cls: Type[T] ) -> T:
+
+def parse(cls: Type[T]) -> T:
     """
     Спарсить переменные окружения с помощью указанного датакласса.
 
@@ -83,77 +111,100 @@ def parse(cls: Type[T] ) -> T:
     # Словарь полей и их значений из окружения
     value_dict = dict()
 
+    # Список ошибок парсинга
+    exception_list: list[Exception] = []
+
     # Проходимся по каждому полю датакласса
     for class_field in fields(cls):
-        field_types = [class_field.type]
-        field_name = _snake_case_to_env(class_field.name)
-        field_modificators = list()
+        try:
+            field_types = [class_field.type]
+            field_name = _snake_case_to_env(class_field.name)
+            field_modificators = list()
 
-        # Если тип - датакласс, то парсим его из окружения и вставляем в поле
-        if is_dataclass(field_types[0]):
-            value_dict[class_field.name] = parse(field_types[0]) # type: ignore
-            continue
-
-        # Если тип - набор строк, то добавляем фильтр
-        if get_origin(field_types[0]) is Literal:
-            possible_values = get_args(field_types[0])
-            def literal_modificator(value):
-                if value not in possible_values:
-                    raise ValueError(f"Ошибка: переменная {prefix}_{field_name} должна принимать одно из этих значений: {possible_values}")
-                return value
-
-            field_modificators.append(literal_modificator)
-            field_types = [str]
-
-        # Если тип имеет модификаторы, то собираем их в список
-        if get_origin(field_types[0]) is Annotated:
-            args = get_args(field_types[0])
-            field_types = [args[0]]
-            field_modificators += args[1:]
-
-        # Если тип составной, то переводим его в список типов
-        if get_origin(field_types[0]) in (Union, UnionType):
-            field_types = list(get_args(field_types[0]))
-
-        # Получаем строковое значение из окружения
-        initial_value = getenv(f"{prefix}_{field_name}")
-        value = initial_value
-
-        # Если значения нет
-        if value is None or len(value.strip()) == 0:
-            # И нет дефолтных значений для поля, то выдаем ошибку
-            if class_field.default is MISSING and class_field.default_factory is MISSING:
-                raise ValueError(f"Ошибка: переменная {prefix}_{field_name} не найдена и не имеет значения по умолчанию")
-            # Иначе пропускаем поле, автоматом присваивая ему дефолтное значение
-            continue
-
-        # Попытка преобразовать поле в нужные типы
-        for field_type in field_types:
-            try:
-                if field_type is bool:
-                    field_type = _boolean
-                value = field_type(value) # type: ignore
-                break
-            except:
+            # Если тип - датакласс, то парсим его из окружения и вставляем в поле
+            if is_dataclass(field_types[0]):
+                value_dict[class_field.name] = parse(field_types[0])  # type: ignore
                 continue
 
-        # Добавление модификатора проверки типа в конец
-        def enforce_type_modificator(value):
-            if type(value) not in field_types:
-                raise ValueError(f"Ошибка: поле {cls.__name__}.{class_field.name} c типами {field_types} не может принять значение {type(value)}({value})")
-            return value
-        field_modificators.append(enforce_type_modificator)
+            # Если тип - набор строк, то добавляем фильтр
+            if get_origin(field_types[0]) is Literal:
+                possible_values = get_args(field_types[0])
 
-        # Применение модификаторов
-        for modificator in field_modificators:
-            try:
-                value = modificator(value)
-            except Exception as e:
-                raise ValueError(f"Ошибка: {cls.__name__}.{class_field.name} | {modificator.__name__}: {e}")
+                def literal_modificator(value):
+                    if value not in possible_values:
+                        raise ValueError(
+                            f"Переменная {prefix}_{field_name} должна принимать одно из этих значений: {possible_values}"
+                        )
+                    return value
 
-        # Сохранение значения поля
-        value_dict[class_field.name] = value
+                field_modificators.append(literal_modificator)
+                field_types = [str]
+
+            # Если тип имеет модификаторы, то собираем их в список
+            if get_origin(field_types[0]) is Annotated:
+                args = get_args(field_types[0])
+                field_types = [args[0]]
+                field_modificators += args[1:]
+
+            # Если тип составной, то переводим его в список типов
+            if get_origin(field_types[0]) in (Union, UnionType):
+                field_types = list(get_args(field_types[0]))
+
+            # Получаем строковое значение из окружения
+            initial_value = getenv(f"{prefix}_{field_name}")
+            value = initial_value
+
+            # Если значения нет
+            if value is None or len(value.strip()) == 0:
+                # И нет дефолтных значений для поля, то выдаем ошибку
+                if (
+                    class_field.default is MISSING
+                    and class_field.default_factory is MISSING
+                ):
+                    raise ValueError(
+                        f"Переменная {prefix}_{field_name} не найдена и не имеет значения по умолчанию"
+                    )
+                # Иначе пропускаем поле, автоматом присваивая ему дефолтное значение
+                continue
+
+            # Попытка преобразовать поле в нужные типы
+            for field_type in field_types:
+                try:
+                    if field_type is bool:
+                        field_type = _boolean
+                    value = field_type(value)  # type: ignore
+                    break
+                except:
+                    continue
+
+            # Добавление модификатора проверки типа в конец
+            def enforce_type_modificator(value):
+                if type(value) not in field_types:
+                    raise ValueError(
+                        f"Переменная {prefix}_{field_name} c типами {field_types} не может принять значение {type(value)}({value})"
+                    )
+                return value
+
+            field_modificators.append(enforce_type_modificator)
+
+            # Применение модификаторов
+            for modificator in field_modificators:
+                try:
+                    value = modificator(value)
+                except Exception as e:
+                    raise ValueError(
+                        f"Ошибка: {cls.__name__}.{class_field.name} | {modificator.__name__}: {e}"
+                    )
+
+            # Сохранение значения поля
+            value_dict[class_field.name] = value
+        except Exception as e:
+            exception_list.append(e)
+
+    if len(exception_list) > 0:
+        raise AggregatedException(
+            exception_list, "Найдены следующие ошибки конфигурации:"
+        )
 
     # Создание объекта из полученных полей и их значений
     return cls(**value_dict)
-

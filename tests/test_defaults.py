@@ -3,6 +3,7 @@ from dataclasses import dataclass, field
 from os import environ
 from confi import parse
 
+
 def set_environment(variables: dict[str, str | None]):
     for name, value in variables.items():
         if value is None:
@@ -10,10 +11,13 @@ def set_environment(variables: dict[str, str | None]):
         else:
             environ[name] = value
 
+
 def test_builtin_types():
-    set_environment({
-        "TEST_CLASS_FIELD_A": None,
-    })
+    set_environment(
+        {
+            "TEST_CLASS_FIELD_A": None,
+        }
+    )
 
     @dataclass
     class TestClass:
@@ -23,11 +27,9 @@ def test_builtin_types():
 
     assert parsed_value.field_a == 10
 
+
 def test_optional_types():
-    set_environment({
-        "TEST_CLASS_FIELD_A": None,
-        "TEST_CLASS_FIELD_B": "32"
-    })
+    set_environment({"TEST_CLASS_FIELD_A": None, "TEST_CLASS_FIELD_B": "32"})
 
     @dataclass
     class TestClass:
@@ -39,10 +41,13 @@ def test_optional_types():
     assert parsed_value.field_a is None
     assert parsed_value.field_b == 32
 
+
 def test_default_factory():
-    set_environment({
-        "TEST_CLASS_FIELD_A": None,
-    })
+    set_environment(
+        {
+            "TEST_CLASS_FIELD_A": None,
+        }
+    )
 
     @dataclass
     class TestClass:
@@ -52,10 +57,13 @@ def test_default_factory():
 
     assert parsed_value.field_a is 42
 
+
 def test_literal():
-    set_environment({
-        "TEST_CLASS_FIELD_A": None,
-    })
+    set_environment(
+        {
+            "TEST_CLASS_FIELD_A": None,
+        }
+    )
 
     @dataclass
     class TestClass:
@@ -64,4 +72,3 @@ def test_literal():
     parsed_value = parse(TestClass)
 
     assert parsed_value.field_a == "read"
-
